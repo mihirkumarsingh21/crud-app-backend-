@@ -1,23 +1,81 @@
 import { Client } from "pg";
 import dotenv from "dotenv";
+import express from "express";
 
 dotenv.config();
 
-const client = new Client({
-    user: process.env.USER,
-    password: process.env.PASSWORD,
-    database: process.env.DATABASE,
-    host: process.env.HOST
+const app = express();
+
+app.use(express.json());
+
+
+const pgClient = new Client({
+   connectionString: process.env.PGSQL_CONNECTION_STRING
+})
+
+pgClient.connect();
+
+app.post("/register", async (req, res) => {
+   try {
+     const {username, email, password, city, country, street, pincode} = req.body;
+
+     const sqlUserInsertQuery = `INSERT INTO users (username, email, password) VALUES($1, $2, $3) RETURNING id`;
+     
+     const sqlAddressesInsertQuery = `INSERT INTO addresses (city, country, street, pincode, user_id) VALUES ($1, $2, $3, $4, $5)`;
+
+
+     await pgClient.query("BEGIN");
+     
+     const regUser = await pgClient.query(sqlUserInsertQuery, [username, email, password]);
+     const userId = regUser.rows[0].id;
+     await pgClient.query(sqlAddressesInsertQuery, [city, country, street, pincode, userId]);
+
+     await pgClient.query("COMMIT");
+
+
+    res.json({
+        message: "user register successfully.",
+        regUser
+    })
+
+
+   } catch (error: any) {
+    console.log(`error : ${error}`);
+    
+        res.status(500).json({
+            success: false,
+            message: error.message
+        })
+
+        return;
+   }
+})
+
+app.get("/metadata", async (req, res) => {
+    try {
+        const { id } = req.query;
+        const userGetQuery = `SELECT username, email FROM users WHERE id = $1`;
+        const addressesGetQuery = `SELECT * FROM addresses WHERE user_id = $1`;
+
+        const res1 = await pgClient.query(userGetQuery, [id]);
+        const res2 = await pgClient.query(addressesGetQuery, [id]);
+
+
+        res.json({
+            success: true,
+            users: res1.rows[0],
+            addresses: res2.rows
+        })
+
+    } catch (error: any) {
+        console.log(`error while getting user + meta data: ${error}`);
+        res.status(500).json({
+            success: false,
+            message: `server error something went wrong: ${error.message}`
+        })
+    }
 })
 
 
-const connectingToDatabase = async (): Promise < void > => {
-   const connectionInstance = await client.connect();
-   console.log(`databasecresponse: ${connectionInstance}`);
-   
-}
+app.listen(3000)
 
-
-
-connectingToDatabase();
-// timestamps -> 1 : 22 : 00
