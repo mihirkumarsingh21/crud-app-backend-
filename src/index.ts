@@ -76,6 +76,26 @@ app.get("/metadata", async (req, res) => {
     }
 })
 
+app.get("/metadata-bettar", async (req, res) => {
+    try {
+        const {id} = req.query;
+        const userQuery = `SELECT users.username, users.email, addresses.city, addresses.country, addresses.street, addresses.pincode FROM users JOIN addresses ON users.id = addresses.user_id WHERE users.id = $1`;
+
+       const response = await pgClient.query(userQuery, [id]);
+       res.status(200).json({
+        success: true,
+        message: response.rows
+       })
+
+    } catch (error: any) {
+
+        res.status(500).json({
+            success: false,
+            message: `server error something went wrong: ${error.message}`
+        })
+    }
+})
+
 
 app.listen(3000)
 
