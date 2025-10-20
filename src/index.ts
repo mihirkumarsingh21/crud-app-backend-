@@ -1,22 +1,22 @@
-import { PrismaClient } from "../src/generated/client/client.js";
+import express from "express";
+import dotenv from "dotenv";
+import userRoute from "./routes/user.route.js";
+import todoRoute from "./routes/todo.route.js";
+
+dotenv.config();
+const app = express();
+
+app.use(express.json());
 
 
-const client = new PrismaClient();
+app.use("/api/v1/users", userRoute);
+app.use("/api/v1/todos", todoRoute);
 
 
-const createUser = async () => {
-   const user = await client.user.update({
-        where: {
-           id: 1
-        },
-        data: {
-            username: "purnima",
-            email: "p@gmail.com"
-        }
-    })
 
-    console.log(`USER : ${JSON.stringify(user)}`);
+
+const port = process.env.PORT || 3000
+app.listen(port, () => {
+    console.log(`SERVER IS RUNNING AT PORT -> ${port}`);
     
-}
-
-createUser();
+})
